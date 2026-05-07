@@ -1,5 +1,5 @@
 import AppNav from "../components/AppNav"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 const AddStock = () => {
   const initialForm = {
@@ -20,11 +20,7 @@ const AddStock = () => {
 
   const [form, setForm] = useState(initialForm)
 
-  const medicineOptions = [
-    { id: "amx500", label: "Amoxicillin 500mg", generic: "Amoxicillin Trihydrate", category: "Antibiotic", reorderLevel: "300" },
-    { id: "pct650", label: "Paracetamol 650mg", generic: "Acetaminophen", category: "Analgesic", reorderLevel: "500" },
-    { id: "met500", label: "Metformin 500mg", generic: "Metformin HCl", category: "Antidiabetic", reorderLevel: "400" },
-  ]
+  const [medicineOptions, setMedicineOptions] = useState([])
 
   const handleChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -43,35 +39,62 @@ const AddStock = () => {
       return
     }
 
-    const selected = medicineOptions.find((option) => option.id === selectedId)
+    const selected = medicineOptions.find((option) => option.id === Number(selectedId))
     if (!selected) return
 
     setForm((prev) => ({
       ...prev,
       medicineId: selected.id,
-      medicineName: selected.label,
-      genericName: selected.generic,
+      medicineName: selected.name,
+      genericName: selected.generic_name,
       category: selected.category,
       reorderLevel: selected.reorderLevel,
     }))
   }
 
+  // resetting the form
   const handleReset = () => {
-    setForm(initialForm)
+    setForm({...initialForm})
   }
 
+  // submitting the form
   const handleSubmit = async (event) => {
   event.preventDefault()
 
+    let medicineId = form.medicineId
+
+  if (!medicineId) {
+
+  const medicineResponse = await fetch(
+    "http://127.0.0.1:8000/medicines",
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        name: form.medicineName,
+        generic_name: form.genericName,
+        category: form.category,
+        reorder_level: Number(form.reorderLevel),
+      }),
+    }
+  )
+
+  const medicineData = await medicineResponse.json()
+
+  medicineId = medicineData.id
+}
+
   const payload = {
-    batch_number: form.batchNumber,
-    medicine_id: 1,
-    manufacture_date: form.manufactureDate,
-    expiry_date: form.expiryDate,
-    quantity: Number(form.quantity),
-    unit_price: Number(form.unitPrice),
-    supplier: form.supplier,
-  }
+  batch_number: form.batchNumber,
+  medicine_id: Number(medicineId),
+  expiry_date: form.expiryDate,
+  current_quantity: Number(form.quantity),
+  price: Number(form.unitPrice),
+}
 
   try {
     const response = await fetch("http://127.0.0.1:8000/batches", {
@@ -95,6 +118,30 @@ const AddStock = () => {
     alert("Failed to add stock")
   }
 }
+
+// fetch med from backend
+  useEffect(() => {
+
+  const fetchMedicines = async () => {
+
+    try {
+
+      const response = await fetch(
+        "http://127.0.0.1:8000/medicines"
+      )
+
+      const data = await response.json()
+
+      setMedicineOptions(data)
+
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  fetchMedicines()
+
+}, [])
 
   const inputClass =
     "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition-colors focus:border-[#4338CA]"
@@ -122,7 +169,7 @@ const AddStock = () => {
                   <option value="">- Choose a medicine -</option>
                   {medicineOptions.map((option) => (
                     <option key={option.id} value={option.id}>
-                      {option.label}
+                      {option.name}
                     </option>
                   ))}
                 </select>
@@ -269,22 +316,6 @@ const AddStock = () => {
               </div>
             </section>
           </div>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="flex items-center gap-2 border-b border-slate-100 pb-4 text-lg font-semibold text-slate-800">
-              <i className="ri-file-list-3-line text-[#4338CA]" />
-              Additional notes
-            </h2>
-            <div className="pt-4">
-              <textarea
-                value={form.notes}
-                onChange={(event) => handleChange("notes", event.target.value)}
-                rows={4}
-                className={`${inputClass} resize-y`}
-                placeholder="Any notes about this stock entry, quality remarks, storage conditions..."
-              />
-            </div>
-          </section>
 
           <div className="flex items-center justify-end gap-3 pb-2">
             <button

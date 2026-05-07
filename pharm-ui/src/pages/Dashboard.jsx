@@ -1,27 +1,13 @@
 import AppNav from "../components/AppNav"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 const Dashboard = () => {
   const navigate = useNavigate()
   const [range, setRange] = useState("today")
 
-  const medicines = [
-    { name: "Amoxicillin 500mg", generic: "Amoxicillin Trihydrate", qty: 1250, reorder: 300, unitPrice: 11 },
-    { name: "Paracetamol 650mg", generic: "Acetaminophen", qty: 0, reorder: 500, unitPrice: 3.75 },
-    { name: "Metformin 500mg", generic: "Metformin HCl", qty: 310, reorder: 400, unitPrice: 8.25 },
-    { name: "Atorvastatin 10mg", generic: "Atorvastatin Calcium", qty: 310, reorder: 200, unitPrice: 22 },
-    { name: "Azithromycin 250mg", generic: "Azithromycin Dihydrate", qty: 495, reorder: 150, unitPrice: 34 },
-    { name: "Omeprazole 20mg", generic: "Omeprazole Magnesium", qty: 940, reorder: 250, unitPrice: 15.5 },
-  ]
-
-  const batches = [
-    { id: "AMX-24-001", medicine: "Amoxicillin 500mg", daysToExpiry: -4, qty: 80 },
-    { id: "PCT-24-001", medicine: "Paracetamol 650mg", daysToExpiry: -21, qty: 0 },
-    { id: "MET-24-001", medicine: "Metformin 500mg", daysToExpiry: 50, qty: 110 },
-    { id: "ATV-25-001", medicine: "Atorvastatin 10mg", daysToExpiry: 66, qty: 190 },
-    { id: "AZI-25-001", medicine: "Azithromycin 250mg", daysToExpiry: 52, qty: 170 },
-  ]
+  const [medicines, setMedicines] = useState([])
+  const [batches, setBatches] = useState([])
 
   const activityByRange = {
     today: [
@@ -71,6 +57,57 @@ const Dashboard = () => {
   }
 
   const currencyCompact = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 2 })
+
+  useEffect(() => {
+
+  const fetchDashboardData = async () => {
+
+    try {
+
+      const inventoryResponse = await fetch(
+        "http://127.0.0.1:8000/inventory"
+      )
+
+      const inventoryData = await inventoryResponse.json()
+
+      setMedicines(inventoryData)
+
+      const batchesResponse = await fetch(
+        "http://127.0.0.1:8000/batches"
+      )
+
+      const batchesData = await batchesResponse.json()
+
+      const formattedBatches = batchesData.map((batch) => {
+
+        const today = new Date()
+
+        const expiry = new Date(batch.expiry_date)
+
+        const diffTime = expiry - today
+
+        const daysToExpiry = Math.ceil(
+          diffTime / (1000 * 60 * 60 * 24)
+        )
+
+        return {
+          id: batch.batch_number,
+          medicine: batch.medicine_name,
+          qty: batch.current_quantity,
+          daysToExpiry,
+        }
+      })
+
+      setBatches(formattedBatches)
+
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  fetchDashboardData()
+
+}, [])
 
   return (
     <div className="h-screen w-full bg-[#F8FAFC]">

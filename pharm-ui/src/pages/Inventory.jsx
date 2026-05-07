@@ -1,5 +1,5 @@
 import AppNav from "../components/AppNav"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect  } from "react"
 import { useNavigate } from "react-router-dom"
 
 const Inventory = () => {
@@ -9,62 +9,7 @@ const Inventory = () => {
   const [editingId, setEditingId] = useState(null)
   const [editDraft, setEditDraft] = useState(null)
 
-  const [medicines, setMedicines] = useState([
-    {
-      id: 1,
-      name: "Amoxicillin 500mg",
-      generic: "Amoxicillin Trihydrate",
-      category: "Antibiotic",
-      qty: 1250,
-      reorder: 300,
-      batches: 3,
-    },
-    {
-      id: 2,
-      name: "Paracetamol 650mg",
-      generic: "Acetaminophen",
-      category: "Analgesic",
-      qty: 0,
-      reorder: 500,
-      batches: 2,
-    },
-    {
-      id: 3,
-      name: "Metformin 500mg",
-      generic: "Metformin HCl",
-      category: "Antidiabetic",
-      qty: 310,
-      reorder: 400,
-      batches: 2,
-    },
-    {
-      id: 4,
-      name: "Atorvastatin 10mg",
-      generic: "Atorvastatin Calcium",
-      category: "Statin",
-      qty: 310,
-      reorder: 200,
-      batches: 2,
-    },
-    {
-      id: 5,
-      name: "Azithromycin 250mg",
-      generic: "Azithromycin Dihydrate",
-      category: "Antibiotic",
-      qty: 495,
-      reorder: 150,
-      batches: 1,
-    },
-    {
-      id: 6,
-      name: "Omeprazole 20mg",
-      generic: "Omeprazole Magnesium",
-      category: "PPI",
-      qty: 940,
-      reorder: 250,
-      batches: 2,
-    },
-  ])
+  const [medicines, setMedicines] = useState([])
 
   const getStatus = (med) => {
     if (med.qty === 0) return "out"
@@ -169,6 +114,30 @@ const Inventory = () => {
     }
     `
 
+    // fetch inventory
+    useEffect(() => {
+
+  const fetchInventory = async () => {
+
+    try {
+
+      const response = await fetch(
+        "http://127.0.0.1:8000/inventory"
+      )
+
+      const data = await response.json()
+
+      setMedicines(data)
+
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  fetchInventory()
+
+}, [])
+
   return (
     <div className="h-screen max-w-full bg-[#F8FAFC]">
       <AppNav title={"Inventory Master"} subTitle={"Medicines · All stock"} />
@@ -206,7 +175,7 @@ const Inventory = () => {
           </div>
 
           <div className="h-[calc(100%-64px)] overflow-y-auto overflow-x-auto">
-            <table className="min-w-[1080px] w-full table-fixed">
+            <table className="min-w-full w-full table-fixed">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="w-[16%] px-5 py-4 text-left">Medicine</th>
@@ -216,7 +185,7 @@ const Inventory = () => {
                   <th className="w-[10%] px-5 py-4 text-left">Reorder lvl</th>
                   <th className="w-[12%] px-5 py-4 text-left">Batches</th>
                   <th className="w-[12%] px-5 py-4 text-left">Status</th>
-                  <th className="w-[12%] px-5 py-4 text-left">Actions</th>
+                  <th className="w-[8%] px-5 py-4 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -339,12 +308,6 @@ const Inventory = () => {
                             </>
                           ) : (
                             <>
-                              <button
-                                onClick={() => navigate("/app/batchmanagement")}
-                                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                              >
-                                Batches
-                              </button>
                               <button
                                 onClick={() => handleStartEdit(med)}
                                 className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
