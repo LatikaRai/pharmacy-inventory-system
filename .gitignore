@@ -1,0 +1,16 @@
+# dependencies
+node_modules
+venv
+
+# env
+.env
+
+# python cache
+__pycache__/
+*.pyc
+
+# vite
+dist
+
+# misc
+.DS_Store

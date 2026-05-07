@@ -131,7 +131,7 @@ const Alerts = () => {
           </div>
           {/* alerts */}
           {
-           alert.map((batch,idx)=>{
+           alerts.map((batch,idx)=>{
             const info = getBatchStatus(batch)
             return <div key={batch.id} className={`w-full flex items-center justify-between border-b-2 border-slate-100 p-6 ${info.bg}`}>
               <div className="flex items-center gap-4">

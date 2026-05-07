@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router";
 
-const AppNav = ({title,subTitle,alerts}) => {
+const AppNav = ({title,subTitle}) => {
 
   const navigate = useNavigate();
+  
 
   return (
     <div>
@@ -23,8 +24,6 @@ const AppNav = ({title,subTitle,alerts}) => {
           </div>
           <div onClick={()=>navigate("/app/alerts")} className="relative border-2 border-gray-200 px-2 py-1 text-md rounded-md">
             <i className="ri-notification-2-line"></i>
-            {alerts.length > 0 &&
-              <div className="absolute h-1.5 w-1.5 rounded-full bg-red-400 top-1 right-1"></div>}
           </div>
           <div className="h-10 w-10 rounded-full bg-amber-400"></div>
         </div>

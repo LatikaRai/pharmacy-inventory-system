@@ -60,12 +60,41 @@ const AddStock = () => {
     setForm(initialForm)
   }
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    console.log("Stock entry submitted:", form)
-    alert("Stock entry recorded.")
-    setForm(initialForm)
+  const handleSubmit = async (event) => {
+  event.preventDefault()
+
+  const payload = {
+    batch_number: form.batchNumber,
+    medicine_id: 1,
+    manufacture_date: form.manufactureDate,
+    expiry_date: form.expiryDate,
+    quantity: Number(form.quantity),
+    unit_price: Number(form.unitPrice),
+    supplier: form.supplier,
   }
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/batches", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await response.json()
+
+    console.log("Backend response:", data)
+
+    alert("Stock entry recorded successfully!")
+
+    setForm(initialForm)
+
+  } catch (error) {
+    console.log(error)
+    alert("Failed to add stock")
+  }
+}
 
   const inputClass =
     "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition-colors focus:border-[#4338CA]"
@@ -75,7 +104,7 @@ const AddStock = () => {
     <div className="h-screen bg-[#F8FAFC]">
       <AppNav title={"Add Stock (Inward)"} subTitle={"Operations · New entry"} />
       <form onSubmit={handleSubmit} className="h-[90vh] overflow-y-auto px-6 py-6">
-        <div className="mx-auto w-full max-w-[1100px] space-y-4">
+        <div className="mx-auto w-full max-w-1100 space-y-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="flex items-center gap-2 border-b border-slate-100 pb-4 text-lg font-semibold text-slate-800">

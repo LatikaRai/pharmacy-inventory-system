@@ -1,94 +1,25 @@
 import AppNav from "../components/AppNav"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 const BatchManagement = () => {
   const [activeFilter, setActiveFilter] = useState("all")
   const [query, setQuery] = useState("")
 
-  const batches = [
-    {
-      id: "AMX-24-001",
-      medicine: "Amoxicillin 500mg",
-      mfgDate: "01 Apr 2024",
-      expiryDate: "06 Apr 2026",
-      daysToExpiry: -4,
-      qty: 80,
-      unitPrice: 12.5,
-    },
-    {
-      id: "AMX-25-002",
-      medicine: "Amoxicillin 500mg",
-      mfgDate: "01 Jun 2025",
-      expiryDate: "15 Jan 2027",
-      daysToExpiry: 289,
-      qty: 450,
-      unitPrice: 11,
-    },
-    {
-      id: "PCT-24-001",
-      medicine: "Paracetamol 650mg",
-      mfgDate: "01 Mar 2024",
-      expiryDate: "20 Mar 2026",
-      daysToExpiry: -21,
-      qty: 0,
-      unitPrice: 3.5,
-    },
-    {
-      id: "PCT-25-001",
-      medicine: "Paracetamol 650mg",
-      mfgDate: "01 May 2025",
-      expiryDate: "01 May 2027",
-      daysToExpiry: 395,
-      qty: 620,
-      unitPrice: 3.75,
-    },
-    {
-      id: "MET-24-001",
-      medicine: "Metformin 500mg",
-      mfgDate: "01 May 2024",
-      expiryDate: "30 May 2026",
-      daysToExpiry: 50,
-      qty: 110,
-      unitPrice: 8,
-    },
-    {
-      id: "MET-25-001",
-      medicine: "Metformin 500mg",
-      mfgDate: "01 Aug 2025",
-      expiryDate: "10 Aug 2027",
-      daysToExpiry: 496,
-      qty: 200,
-      unitPrice: 8.25,
-    },
-    {
-      id: "ATV-25-001",
-      medicine: "Atorvastatin 10mg",
-      mfgDate: "15 Jun 2025",
-      expiryDate: "15 Jun 2026",
-      daysToExpiry: 66,
-      qty: 190,
-      unitPrice: 22,
-    },
-    {
-      id: "AZI-25-001",
-      medicine: "Azithromycin 250mg",
-      mfgDate: "01 Jun 2025",
-      expiryDate: "01 Jun 2026",
-      daysToExpiry: 52,
-      qty: 170,
-      unitPrice: 34,
-    },
-    {
-      id: "OMP-25-001",
-      medicine: "Omeprazole 20mg",
-      mfgDate: "20 Mar 2025",
-      expiryDate: "20 Mar 2027",
-      daysToExpiry: 353,
-      qty: 390,
-      unitPrice: 15.5,
-    },
-  ]
+  // for editing batch
+  const [showModal, setShowModal] = useState(false)
 
+  const [editForm, setEditForm] = useState({
+    expiryDate: "",
+    qty: "",
+    unitPrice: "",
+  })
+
+const [selectedBatch, setSelectedBatch] = useState(null)
+
+  const [batches, setBatches] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // batch status
   const getExpiryStatus = (daysToExpiry) => {
     if (daysToExpiry < 0) return "expired"
     if (daysToExpiry <= 90) return "expiring"
@@ -119,11 +50,55 @@ const BatchManagement = () => {
     return "text-slate-700"
   }
 
+  // expiry date
   const formatDateHint = (daysToExpiry) => {
     if (daysToExpiry < 0) return `${Math.abs(daysToExpiry)}d past`
     return `${daysToExpiry}d`
   }
 
+// fetching data from backend
+  useEffect(() => {
+  const fetchBatches = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/batches")
+
+      const data = await response.json()
+
+      const formattedData = data.map((batch) => {
+        const expiry = new Date(batch.expiry_date)
+        const today = new Date()
+
+        const diffTime = expiry - today
+
+        const daysToExpiry = Math.ceil(
+          diffTime / (1000 * 60 * 60 * 24)
+        )
+
+        return {
+          dbId: batch.id,
+          id: batch.batch_number,
+          medicine: batch.medicine_name ,
+          mfgDate: "N/A",
+          expiryDate: batch.expiry_date,
+          daysToExpiry,
+          qty: batch.current_quantity,
+          unitPrice: batch.price,
+}
+      })
+
+      setBatches(formattedData)
+
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchBatches()
+}, [])
+
+// filtering out batches
   const filteredBatches = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
 
@@ -150,6 +125,76 @@ const BatchManagement = () => {
         ? "bg-[#4338CA] text-white"
         : "border border-slate-300 bg-white text-slate-500 hover:border-slate-400 hover:text-slate-700"
     }`
+
+    // deleting a batch
+  const deleteBatch = async (id) => {
+    try {
+      await fetch(`http://127.0.0.1:8000/batches/${id}`, {
+        method: "DELETE",
+      })
+
+      setBatches((prev) =>
+        prev.filter((batch) => batch.dbId !== id)
+      )
+
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  // editing a batch
+  const editBatch = (batch) => {
+  setSelectedBatch(batch)
+
+  setEditForm({
+    expiryDate: batch.expiryDate,
+    qty: batch.qty,
+    unitPrice: batch.unitPrice,
+  })
+
+  setShowModal(true)
+}
+
+  const saveEdit = async () => {
+
+  try {
+
+    await fetch(
+      `http://127.0.0.1:8000/batches/${selectedBatch.dbId}`,
+      {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          expiry_date: editForm.expiryDate,
+          current_quantity: Number(editForm.qty),
+          price: Number(editForm.unitPrice),
+        }),
+      }
+    )
+
+    setBatches((prev) =>
+      prev.map((batch) =>
+        batch.dbId === selectedBatch.dbId
+          ? {
+              ...batch,
+              expiryDate: editForm.expiryDate,
+              qty: Number(editForm.qty),
+              unitPrice: Number(editForm.unitPrice),
+            }
+          : batch
+      )
+    )
+
+    setShowModal(false)
+
+  } catch (error) {
+    console.log(error)
+  }
+} 
 
   return (
     <div className="h-screen max-w-full bg-[#F8FAFC]">
@@ -181,12 +226,11 @@ const BatchManagement = () => {
           </div>
 
           <div className="h-[calc(100%-64px)] overflow-y-auto overflow-x-auto">
-            <table className="min-w-285 w-full table-fixed">
+            <table className="w-full table-fixed">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="w-[10%] px-4 py-4 text-left">Batch no.</th>
                   <th className="w-[14%] px-4 py-4 text-left">Medicine</th>
-                  <th className="w-[14%] px-4 py-4 text-left">Manufacture date</th>
                   <th className="w-[12%] px-4 py-4 text-left">Expiry date</th>
                   <th className="w-[8%] px-4 py-4 text-left">Qty</th>
                   <th className="w-[10%] px-4 py-4 text-left">Unit price</th>
@@ -207,7 +251,6 @@ const BatchManagement = () => {
                         <span className="rounded bg-slate-100 px-2 py-1 font-medium text-slate-700">{batch.id}</span>
                       </td>
                       <td className="px-4 py-4 font-semibold text-slate-800">{batch.medicine}</td>
-                      <td className="px-4 py-4 text-slate-500">{batch.mfgDate}</td>
                       <td className="px-4 py-4">
                         <p className={`font-semibold ${expiryTextClass(status)}`}>{batch.expiryDate}</p>
                         <p className={`text-xs ${expiryTextClass(status)}`}>({formatDateHint(batch.daysToExpiry)})</p>
@@ -222,6 +265,11 @@ const BatchManagement = () => {
                       </td>
                       <td className="px-4 py-4">
                         <button
+                          onClick={() =>
+                            isExpired
+                              ? deleteBatch(batch.dbId)
+                              : editBatch(batch)
+                          }
                           className={`rounded-md border px-3 py-1 text-xs font-semibold transition-colors ${
                             isExpired
                               ? "border-red-200 bg-red-100 text-red-700 hover:bg-red-200/70"
@@ -245,6 +293,81 @@ const BatchManagement = () => {
           </div>
         </div>
       </div>
+      {
+  showModal && (
+    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+
+      <div className="w-[400px] rounded-2xl bg-white p-6">
+
+        <h1 className="mb-5 text-xl font-semibold">
+          Edit Batch
+        </h1>
+
+        <div className="flex flex-col gap-4">
+
+          <input
+            type="date"
+            value={editForm.expiryDate}
+            onChange={(e) =>
+              setEditForm({
+                ...editForm,
+                expiryDate: e.target.value,
+              })
+            }
+            className="rounded-lg border p-2"
+          />
+
+          <input
+            type="number"
+            value={editForm.qty}
+            onChange={(e) =>
+              setEditForm({
+                ...editForm,
+                qty: e.target.value,
+              })
+            }
+            className="rounded-lg border p-2"
+            placeholder="Quantity"
+          />
+
+          <input
+            type="number"
+            value={editForm.unitPrice}
+            onChange={(e) =>
+              setEditForm({
+                ...editForm,
+                unitPrice: e.target.value,
+              })
+            }
+            className="rounded-lg border p-2"
+            placeholder="Price"
+          />
+
+          <div className="mt-4 flex justify-end gap-3">
+
+            <button
+              onClick={() => setShowModal(false)}
+              className="rounded-lg border px-4 py-2"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={saveEdit}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
+            >
+              Save
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  )
+}
     </div>
   )
 }
